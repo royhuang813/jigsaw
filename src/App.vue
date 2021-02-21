@@ -1,5 +1,7 @@
 <template>
   <div id="app">
+    <h1 class="game-title">拼图游戏</h1>
+    <p class="pass-text" v-show="isPass">恭喜通关!</p>
     <ul class="box" :style="{ width: size * 100 + 'px' }">
       <li
         class="item"
@@ -11,6 +13,26 @@
       >
         {{ item.name }}
       </li>
+    </ul>
+    <ul class="panel">
+      <li>
+        <button class="start-btn" @click="startGame">开始游戏</button
+        ><span class="spend-time">耗时：{{ time }}s</span>
+      </li>
+      <li>
+        <span>当前宫格：{{ size ** 1 }}</span
+        ><input
+          type="range"
+          name=""
+          id=""
+          :value="size"
+          @input="handleInputSize"
+          min="3"
+          max="7"
+          step="1"
+        />
+      </li>
+      <li>已走步数：{{ step }}</li>
     </ul>
   </div>
 </template>
@@ -36,6 +58,11 @@ export default {
       curSpaceXAxis: Number, //the space item current status
       curSpaceYAxis: Number,
       curSpaceIndex: Number,
+      step: 0, //record step
+      isPass: false, //game pass or not
+      time: 0, //use time
+      isStart: false, //game start or not
+      timer: null,
     };
   },
   mounted() {
@@ -43,13 +70,26 @@ export default {
     this.moveListen();
   },
   methods: {
+    isVictory() {
+      for (let i = 0, l = this.imgsArr.length; i < l; i++) {
+        if (this.imgsArr[i]["id"] !== i + 1) {
+          return false;
+        }
+      }
+      return true;
+    },
     changeSet(target, space) {
       [this.imgsArr[space], this.imgsArr[target]] = [
         this.imgsArr[target],
         this.imgsArr[space],
       ];
       this.curSpaceIndex = target;
+      this.step++;
       this.$forceUpdate();
+      if (this.isVictory()) {
+        this.isPass = true;
+        clearInterval(this.timer);
+      }
     },
     findWhoWillBeMoved(axis, direction) {
       //left or right
@@ -86,36 +126,80 @@ export default {
           this.changeSet(targetIndex, this.curSpaceIndex);
         }
       } else if (axis === "y") {
-        if (direction === "minus") {
-        } else if (direction === "add") {
+        if (direction === "up" && this.curSpaceYAxis - 1 > 0) {
+          let targetIndex = Number; //the item index who will be moved
+          for (let i = 0, l = this.imgsArr.length; i < l; i++) {
+            if (
+              this.imgsArr[i]["x"] === this.curSpaceXAxis &&
+              this.imgsArr[i]["y"] === this.curSpaceYAxis - 1
+            ) {
+              targetIndex = i;
+              this.imgsArr[i]["y"] = this.curSpaceYAxis;
+              this.imgsArr[this.curSpaceIndex]["y"] = this.curSpaceYAxis - 1;
+              this.curSpaceYAxis = this.curSpaceYAxis - 1;
+              break;
+            }
+          }
+          this.changeSet(targetIndex, this.curSpaceIndex);
+        } else if (
+          direction === "down" &&
+          this.curSpaceYAxis + 1 <= this.size
+        ) {
+          let targetIndex = Number; //the item index who will be moved
+          for (let i = 0, l = this.imgsArr.length; i < l; i++) {
+            if (
+              this.imgsArr[i]["x"] === this.curSpaceXAxis &&
+              this.imgsArr[i]["y"] === this.curSpaceYAxis + 1
+            ) {
+              targetIndex = i;
+              this.imgsArr[i]["y"] = this.curSpaceYAxis;
+              this.imgsArr[this.curSpaceIndex]["y"] = this.curSpaceYAxis + 1;
+              this.curSpaceYAxis = this.curSpaceYAxis + 1;
+              break;
+            }
+          }
+          this.changeSet(targetIndex, this.curSpaceIndex);
         }
       }
     },
     moveListen() {
       document.onkeyup = (e) => {
-        switch (e.keyCode) {
-          case 37: {
-            //left
-            this.findWhoWillBeMoved("x", "left");
-            break;
-          }
-          case 38: {
-            //up
-            this.findWhoWillBeMoved("y", "up");
-            break;
-          }
-          case 39: {
-            //right
-            this.findWhoWillBeMoved("x", "right");
-            break;
-          }
-          case 40: {
-            //down
-            this.findWhoWillBeMoved("y", "down");
-            break;
+        if (this.isStart) {
+          switch (e.keyCode) {
+            case 37: {
+              //left
+              this.findWhoWillBeMoved("x", "left");
+              break;
+            }
+            case 38: {
+              //up
+              this.findWhoWillBeMoved("y", "up");
+              break;
+            }
+            case 39: {
+              //right
+              this.findWhoWillBeMoved("x", "right");
+              break;
+            }
+            case 40: {
+              //down
+              this.findWhoWillBeMoved("y", "down");
+              break;
+            }
           }
         }
       };
+    },
+    startGame() {
+      this.isStart = true;
+      this.timer = setInterval(() => {
+        this.time++;
+      }, 1000);
+    },
+    handleInputSize(e) {
+      let val = e.target.value;
+      this.buildBox(e.target.value * 1);
+      this.size = val;
     },
     buildBox(size) {
       let num = 1;
@@ -138,6 +222,7 @@ export default {
       this.curSpaceYAxis = y;
       this.curSpaceIndex = imgsArr.length - 1;
       this.imgsArr = imgsArr;
+      this.$forceUpdate();
     },
   },
 };
@@ -147,10 +232,23 @@ export default {
 * {
   background-color: antiquewhite;
 }
+#app {
+  position: relative;
+}
+.game-title {
+  color: #333;
+  text-align: center;
+}
+.pass-text {
+  padding: 20px 0 0 0;
+  color: rgb(22, 196, 22);
+  font-size: 20px;
+  text-align: center;
+}
 .box {
   display: flex;
   flex-wrap: wrap;
-  margin: 100px auto;
+  margin: 50px auto 0;
   color: red;
   outline: 1px solid #000;
   .item {
@@ -159,6 +257,27 @@ export default {
     text-align: center;
     line-height: 100px;
     outline: 1px solid #fff;
+  }
+}
+.panel {
+  position: absolute;
+  top: 10px;
+  right: 200px;
+  .start-btn {
+    margin: 0 0 10px 0;
+    &:hover {
+      color: green;
+    }
+    &:active {
+      color: green;
+      // outline: none;
+    }
+    &:focus {
+      outline: none;
+    }
+  }
+  .spend-time {
+    padding: 0 0 0 50px;
   }
 }
 </style>
