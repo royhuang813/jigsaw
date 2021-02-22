@@ -9,7 +9,7 @@
         :key="index"
         :data-x="item.x"
         :data-y="item.y"
-        :data-id="item.id - 1"
+        :data-id="item.id"
       >
         {{ item.name }}
       </li>
@@ -20,7 +20,7 @@
         ><span class="spend-time">耗时：{{ time }}s</span>
       </li>
       <li>
-        <span>当前宫格：{{ size ** 1 }}</span
+        <span>当前宫格：{{ size }}</span
         ><input
           type="range"
           name=""
@@ -66,13 +66,13 @@ export default {
     };
   },
   mounted() {
-    this.buildBox(this.size ** 1);
+    this.buildBox(this.size);
     this.moveListen();
   },
   methods: {
     isVictory() {
       for (let i = 0, l = this.imgsArr.length; i < l; i++) {
-        if (this.imgsArr[i]["id"] !== i + 1) {
+        if (this.imgsArr[i]["id"] !== i) {
           return false;
         }
       }
@@ -202,26 +202,59 @@ export default {
       this.size = val;
     },
     buildBox(size) {
-      let num = 1;
+      let num = 0;
       let imgsArr = [];
-      for (let i = size; i > 0; i--) {
-        for (let j = 1; j <= size; j++) {
+      let tempSize = size;
+      let total = size ** 2;
+      // for (let i = size; i > 0; i--) {
+      //   for (let j = 1; j <= size; j++) {
+      //     let obj = {
+      //       x: j,
+      //       y: i,
+      //       id: num,
+      //       name: num,
+      //     };
+      //     imgsArr.push(obj);
+      //     num++;
+      //   }
+      // }
+
+      // build item
+      while (total > 0) {
+        imgsArr.push({ id: num, name: num + 1 });
+        num++;
+        total--;
+      }
+      let randomImgsArr = this._.shuffle(imgsArr);
+      let tempImgsArr = [];
+      // build axis info
+      for (let i = tempSize; i > 0; i--) {
+        for (let j = 1; j <= tempSize; j++) {
           let obj = {
             x: j,
             y: i,
-            id: num,
-            name: num,
           };
-          imgsArr.push(obj);
-          num++;
+          tempImgsArr.push(obj);
         }
       }
-      Object.assign(imgsArr[imgsArr.length - 1], { name: " " });
-      const { x, y } = imgsArr[imgsArr.length - 1];
-      this.curSpaceXAxis = x;
-      this.curSpaceYAxis = y;
-      this.curSpaceIndex = imgsArr.length - 1;
-      this.imgsArr = imgsArr;
+      //get space item
+      for (let i = 0, l = tempImgsArr.length; i < l; i++) {
+        randomImgsArr[i] = Object.assign(randomImgsArr[i], tempImgsArr[i]);
+        if (randomImgsArr[i]["id"] === tempSize ** 2 - 1) {
+          randomImgsArr[i]["name"] = "";
+          const { x, y } = randomImgsArr[i];
+          this.curSpaceXAxis = x;
+          this.curSpaceYAxis = y;
+          this.curSpaceIndex = i;
+        }
+      }
+      // console.log("q", randomImgsArr);
+      // Object.assign(randomImgsArr[randomImgsArr.length - 1], { name: " " });
+      // const { x, y } = randomImgsArr[randomImgsArr.length - 1];
+      // this.curSpaceXAxis = x;
+      // this.curSpaceYAxis = y;
+      // this.curSpaceIndex = randomImgsArr.length - 1;
+      this.imgsArr = randomImgsArr;
       this.$forceUpdate();
     },
   },
